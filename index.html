@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioTag Studio - Edição Limpa</title>
+    
+    <!-- Biblioteca de QR Code Vetorial -->
+    <script src="https://cdn.jsdelivr.net/npm/kjua@0.9.0/dist/kjua.min.js"></script>
+    
+    <style>
+        /* Variáveis de Cores Profissionais */
+        :root {
+            --bg-color: #fcfcfc;
+            --card-bg: #ffffff;
+            --text-main: #1a1a1a;
+            --text-secondary: #757575;
+            --accent: #000000;
+            --border: #f1f1f1;
+            --success: #27ae60;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.04);
+            text-align: center;
+        }
+
+        .logo {
+            max-width: 140px;
+            margin-bottom: 32px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            background: #fdfdfd;
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            font-size: 15px;
+            color: var(--text-main);
+            box-sizing: border-box;
+            transition: border-color 0.2s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #ccc;
+        }
+
+        .phone-flex {
+            display: flex;
+        }
+
+        .prefix {
+            padding: 14px;
+            background: #f5f5f5;
+            border: 1.5px solid var(--border);
+            border-right: none;
+            border-radius: 12px 0 0 12px;
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        .phone-flex input {
+            border-radius: 0 12px 12px 0;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #333;
+        }
+
+        .btn-export {
+            background: transparent;
+            color: var(--success);
+            border: 2px solid var(--success);
+            display: none;
+            margin-top: 16px;
+        }
+
+        #qrcode-output {
+            margin-top: 32px;
+            padding: 15px;
+            background: #fff;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Logo Designer (8).png centralizada -->
+    <img src="Imagens/Designer (1).png" alt="BioTag" class="logo">
+    
+    <div class="input-group">
+        <label>Nome do Pet</label>
+        <input type="text" id="pet" placeholder="Ex: Mel">
+    </div>
+
+    <div class="input-group">
+        <label>Tutor</label>
+        <input type="text" id="tutor" placeholder="Seu nome" style="margin-bottom: 12px;">
+        
+        <label>WhatsApp</label>
+        <div class="phone-flex">
+            <span class="prefix">+55</span>
+            <input type="text" id="phone" placeholder="DDD + Número">
+        </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="generate()">Gerar QR Code</button>
+    <button id="exportBtn" class="btn btn-export" onclick="exportSVG()">Salvar para Impressão 3D</button>
+
+    <div id="qrcode-output"></div>
+</div>
+
+<script>
+    let currentSvgElement = null;
+
+    function generate() {
+        const pet = document.getElementById('pet').value;
+        const tutor = document.getElementById('tutor').value;
+        const phone = document.getElementById('phone').value.replace(/\D/g, '');
+
+        if (!pet || !phone) {
+            alert("Preencha o nome do pet e o WhatsApp.");
+            return;
+        }
+
+        const container = document.getElementById('qrcode-output');
+        container.innerHTML = '';
+
+        // Mensagem de conforto simplificada para o WhatsApp
+        const message = `Olá ${tutor}, encontrei o seu pet ${pet}! Fique tranquilo, está tudo bem.`;
+        const url = `https://wa.me/55${phone}?text=` + encodeURIComponent(message);
+
+        // Geração do QR Code otimizado (fundo nulo para evitar blocos sólidos no 3D)
+        const el = kjua({
+            render: 'svg',
+            text: url,
+            size: 300,
+            fill: '#000',
+            back: null, 
+            ecLevel: 'L', // Nível Low para quadrados maiores
+            crisp: true,
+            quiet: 0
+        });
+
+        container.appendChild(el);
+        currentSvgElement = el;
+        document.getElementById('exportBtn').style.display = 'block';
+    }
+
+    function exportSVG() {
+        if (!currentSvgElement) return;
+
+        // Limpeza técnica: remove elementos 'rect' que causam erro no fatiador 3D
+        const svgClone = currentSvgElement.cloneNode(true);
+        const rects = svgClone.querySelectorAll('rect');
+        rects.forEach(rect => rect.remove());
+
+        const svgData = new XMLSerializer().serializeToString(svgClone);
+        const svgBlob = new Blob([svgData], {type: "image/svg+xml;charset=utf-8"});
+        const svgUrl = URL.createObjectURL(svgBlob);
+        
+        const link = document.createElement("a");
+        link.href = svgUrl;
+        link.download = `biotag_3d_${document.getElementById('pet').value}.svg`;
+        link.click();
+    }
+</script>
+
+</body>
+</html>
